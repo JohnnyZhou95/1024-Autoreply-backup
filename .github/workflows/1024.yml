@@ -1,6 +1,5 @@
 name: 1024-AutoReply
 
-
 on:
   push:
     branches:
