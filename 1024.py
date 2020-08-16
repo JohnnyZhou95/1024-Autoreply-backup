@@ -6,11 +6,17 @@ from time import sleep
 from urllib import parse
 import os
 from getver1 import Getver
+import logging
 
 class Autoreply:
     result=None
     over=False
     flag=False
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    logger.addHandler(ch)
     loginurl = 'http://t66y.com/login.php'
     url='http://t66y.com/thread0806.php?fid=7&search=today'
     posturl='http://t66y.com/post.php?'
@@ -109,7 +115,7 @@ class Autoreply:
         qiuzhutie=con.find('求片求助貼')
         qiuzhutie=con[qiuzhutie-100:qiuzhutie]
         qiuzhutielink=re.findall(pat,qiuzhutie)
-        print('求助帖链接是:'+qiuzhutielink[0])
+        self.logger.debug('求助帖链接是:'+qiuzhutielink[0])
         self.black_list.append(qiuzhutielink[0])
         match=re.findall(pat,con)
         try:
@@ -144,11 +150,11 @@ class Autoreply:
 
     def getreply(self):
         #自定义回复内容，记得修改随机数
-        reply=['1024','感谢分享','谢谢分享','支持一下']
-        reply_m=random.randint(0,1,2,3)
+        reply=['1024','感谢分享','感谢你的分享','谢谢分享','多谢分享']
+        reply_m=random.randint(0,4)
         reply_news=reply[reply_m]
         self.reply_news=reply_news.encode('gb2312')
-        print("本次回复内容是:"+reply_news)
+        self.logger.debug("本次回复内容是:"+reply_news)
 
     #暂时没用，看以后了
     # def encodepost(self):
@@ -196,6 +202,9 @@ class Autoreply:
         num=re.search(pat,index).group(0)
         num=num.replace('共發表帖子: ','')
         return num
+    
+    def debug(self,content):
+        self.logger.debug(content)
 
 if __name__ == "__main__":
     n=0
@@ -209,50 +218,50 @@ if __name__ == "__main__":
     while success is None:
         au=auto.login1()
         if au=='登录尝试次数过多,需输入验证码':
-            print('登录尝试次数过多,需输入验证码')
+            auto.debug('登录尝试次数过多,需输入验证码')
             auto.getverwebp()
             getcd=Getver()
             vercode=getcd.getcode()
             while auto.inputvercode(vercode)=='验证码不正确，请重新输入':
+                auto.debug('验证码不正确，请重新输入')
                 auto.getverwebp()
                 vercode=getcd.getcode()
-                print('验证码不正确，请重新输入')
             if auto.login1()=='賬號已開啟兩步驗證':
                 if auto.login2()=='已經順利登錄':
-                    print('登录成功')
+                    auto.debug('登录成功')
                     success = True
                     au=''
         else:
             if au=='賬號已開啟兩步驗證':
                 if auto.login2()=='已經順利登錄':
-                    print('登录成功')
+                    auto.debug('登录成功')
                     success = True
                     au=''
     m=auto.getnumber()
     auto.gettodaylist()
     #回复
     while n<10 and suc is False:
-        print("当前在第"+str(n+1)+'个。')
+        auto.debug("当前在第"+str(n+1)+'个。')
         auto.getonelink()
         auto.getreply()
         auto.getmatch()
         sleeptime=random.randint(1024,2048)
         au=auto.postreply()
         if au=='回复成功':
-            print('回复成功')
+            auto.debug('回复成功')
             n=n+1
-            print('休眠'+str(sleeptime)+'s...')
+            auto.debug('休眠'+str(sleeptime)+'s...')
             sleep(sleeptime)
-            print('休眠完成')
+            auto.debug('休眠完成')
         elif au=='今日已达上限':
-            print('回复失败，今日次数已达10次')
+            auto.debug('回复失败，今日次数已达10次')
             suc=True
         else:
-            print('1024限制！！！')
-            print('休眠'+str(sleeptime)+'s...')
+            auto.debug('1024限制！！！')
+            auto.debug('休眠'+str(sleeptime)+'s...')
             sleep(sleeptime)
-            print('休眠完成')
+            auto.debug('休眠完成')
     n=auto.getnumber()
-    print('开始时发表帖子:'+m)
-    print('结束时发表帖子:'+n)
-    print('回复'+str(int(m)-int(n))+'次')
+    auto.debug('开始时发表帖子:'+m)
+    auto.debug('结束时发表帖子:'+n)
+    auto.debug('回复'+str(int(m)-int(n))+'次')
