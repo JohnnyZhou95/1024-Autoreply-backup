@@ -28,13 +28,13 @@ class Autoreply:
         'Proxy-Connection': 'keep-alive',
         'Referer': 'http://t66y.com/index.php',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4209.2 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36'
     }
     headers1={
         'Host': 't66y.com',
         'Proxy-Connection': 'keep-alive',
         'Referer': 'http://t66y.com/login.php',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4209.2 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36'
     }
     headers2={
         'Host': 't66y.com',
@@ -42,11 +42,11 @@ class Autoreply:
         'Content-Type': 'application/x-www-form-urlencoded',
         'Proxy-Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4209.2 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36'
         }
 
     def __init__(self,user,password,secret):
-        self.user= user.encode('gb2312')
+        self.user= user.encode('gb18030')
         self.password= password
         self.secret =secret
 
@@ -111,17 +111,21 @@ class Autoreply:
     def gettodaylist(self):
         pat=('htm_data/\w+/\w+/\w+.html')
         con=self.s.get(self.url,headers=self.headers)
-        con = con.text.encode('iso-8859-1').decode('gbk')
+        con = con.text.encode('iso-8859-1').decode('gbk','ignore')
+        match=re.findall(pat,con)
+        self.match=match
         qiuzhutie=con.find('求片求助貼')
         qiuzhutie=con[qiuzhutie-100:qiuzhutie]
-        qiuzhutielink=re.findall(pat,qiuzhutie)
+        if re.findall(pat,qiuzhutie)!=[]:
+            qiuzhutielink=re.findall(pat,qiuzhutie)
+        else:
+            qiuzhutielink=['no']
+            self.match.append('no')
         self.logger.debug('求助帖链接是:'+qiuzhutielink[0])
         self.black_list.append(qiuzhutielink[0])
-        match=re.findall(pat,con)
         try:
             for data in self.black_list:
-                match.remove(data)
-            self.match=match
+                self.match.remove(data)
         except:
             print('移除失败，知道因为啥。。。')
             pass
@@ -133,27 +137,33 @@ class Autoreply:
         self.geturl=geturl
         tid=self.match[m][16:len(self.match[m])-5]
         self.tid=tid
+        self.match.remove(self.match[m])
         #print('请求链接是: '+geturl)
-    
+
+    def browse(self):
+        res=requests.get(url=self.geturl,headers=self.headers,cookies=self.cookies)
+        #res=res.text.encode('iso-8859-1').decode('gbk')
+        #print(res)
+
     #不知道啥用，留着吧
     def getmatch(self):
         sleep(2)
         get=requests.get(self.geturl,headers=self.headers,cookies=self.cookies)
         sleep(2)
         get=get.text.encode('iso-8859-1').decode('gbk')
-        pat='<h4>.*</h4>'
+        pat='<b>本頁主題:</b> .*</td>'
         res=re.search(pat,get)
-        res=res.group(0).replace('<h4>','').replace('</h4>','')
+        res=res.group(0).replace('<b>本頁主題:</b> ','').replace('</td>','')
         res='Re:'+res
         self.res=res
         #print(res)
 
     def getreply(self):
         #自定义回复内容，记得修改随机数
-        reply=['感谢分享','感谢你的分享','谢谢分享','多谢分享']
-        reply_m=random.randint(0,3)
+        reply=['感谢分享','感谢你的分享','谢谢分享','多谢分享','感谢作者的分享','谢谢坛友分享','内容精彩','的确如此','感谢分享','涨知识了','很有意思']
+        reply_m=random.randint(0,10)
         reply_news=reply[reply_m]
-        self.reply_news=reply_news.encode('gb2312')
+        self.reply_news=reply_news.encode('gb18030')
         self.logger.debug("本次回复内容是:"+reply_news)
 
     #暂时没用，看以后了
@@ -222,10 +232,12 @@ if __name__ == "__main__":
             auto.getverwebp()
             getcd=Getver()
             vercode=getcd.getcode()
+            auto.debug(vercode)
             while auto.inputvercode(vercode)=='验证码不正确，请重新输入':
                 auto.debug('验证码不正确，请重新输入')
                 auto.getverwebp()
                 vercode=getcd.getcode()
+                auto.debug(vercode)
             if auto.login1()=='賬號已開啟兩步驗證':
                 if auto.login2()=='已經順利登錄':
                     auto.debug('登录成功')
@@ -241,27 +253,31 @@ if __name__ == "__main__":
     auto.gettodaylist()
     #回复
     while n<10 and suc is False:
-        auto.debug("当前在第"+str(n+1)+'个。')
-        auto.getonelink()
-        auto.getreply()
-        auto.getmatch()
-        sleeptime=random.randint(1024,2048)
-        au=auto.postreply()
-        if au=='回复成功':
-            auto.debug('回复成功')
-            n=n+1
-            auto.debug('休眠'+str(sleeptime)+'s...')
-            sleep(sleeptime)
-            auto.debug('休眠完成')
-        elif au=='今日已达上限':
-            auto.debug('回复失败，今日次数已达10次')
-            suc=True
-        else:
-            auto.debug('1024限制！！！')
-            auto.debug('休眠'+str(sleeptime)+'s...')
-            sleep(sleeptime)
-            auto.debug('休眠完成')
+        try:
+            auto.debug("当前在第"+str(n+1)+'个。')
+            auto.getonelink()
+            auto.browse()
+            auto.getreply()
+            auto.getmatch()
+            sleeptime=random.randint(1024,2048)
+            au=auto.postreply()
+            if au=='回复成功':
+                auto.debug('回复成功')
+                n=n+1
+                auto.debug('休眠'+str(sleeptime)+'s...')
+                sleep(sleeptime)
+                auto.debug('休眠完成')
+            elif au=='今日已达上限':
+                auto.debug('回复失败，今日次数已达10次')
+                suc=True
+            else:
+                auto.debug('1024限制！！！')
+                auto.debug('休眠'+str(sleeptime)+'s...')
+                sleep(sleeptime)
+                auto.debug('休眠完成')
+        except:
+            print('回复失败，重试')
     n=auto.getnumber()
     auto.debug('开始时发表帖子:'+m)
     auto.debug('结束时发表帖子:'+n)
-    auto.debug('回复'+str(int(m)-int(n))+'次')
+    auto.debug('回复'+str(int(n)-int(m))+'次')
