@@ -21,7 +21,6 @@ class Autoreply:
     url='http://t66y.com/thread0806.php?fid=7&search=today'
     posturl='http://t66y.com/post.php?'
     indexurl='http://t66y.com/index.php'
-    black_list=['htm_data/2003/7/3832698.html','htm_data/1602/7/37458.html','htm_data/1502/7/1331010.html','htm_data/2005/7/2520305.html','htm_data/2005/7/2404767.html']
     s=requests.Session()
     headers={
         'Host': 't66y.com',
@@ -109,26 +108,25 @@ class Autoreply:
             return Err
 
     def gettodaylist(self):
+        black_list=[]
         pat=('htm_data/\w+/\w+/\w+.html')
         con=self.s.get(self.url,headers=self.headers)
         con = con.text.encode('iso-8859-1').decode('gbk','ignore')
+        theme=con.find('普通主題')
+        top=con[:theme]
+        pin=re.findall(pat,top)
+        for black in pin:
+            auto.debug('置顶帖为:'+black)
+            black_list.append(black)
+
         match=re.findall(pat,con)
         self.match=match
-        qiuzhutie=con.find('求片求助貼')
-        qiuzhutie=con[qiuzhutie-100:qiuzhutie]
-        if re.findall(pat,qiuzhutie)!=[]:
-            qiuzhutielink=re.findall(pat,qiuzhutie)
-        else:
-            qiuzhutielink=['no']
-            self.match.append('no')
-        self.logger.debug('求助帖链接是:'+qiuzhutielink[0])
-        self.black_list.append(qiuzhutielink[0])
         try:
-            for data in self.black_list:
+            for data in black_list:
                 self.match.remove(data)
         except:
-            print('移除失败，知道因为啥。。。')
-            pass
+            auto.debug('移除失败，若出现此信息，请立即停止运行该脚本，删除定时任务中的触发，等待更新')
+            os._exit(0)
 
     def getonelink(self):
         geturl=''
@@ -276,7 +274,7 @@ if __name__ == "__main__":
                 sleep(sleeptime)
                 auto.debug('休眠完成')
         except:
-            print('回复失败，重试')
+            auto.debug('回复失败，重试')
     n=auto.getnumber()
     auto.debug('开始时发表帖子:'+m)
     auto.debug('结束时发表帖子:'+n)
